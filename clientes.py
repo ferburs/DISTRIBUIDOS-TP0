@@ -14,7 +14,10 @@ def generar_compose(nombre_archivo, cantidad_clientes):
         archivo.write("      - PYTHONUNBUFFERED=1\n")
         archivo.write("      - LOGGING_LEVEL=DEBUG\n")
         archivo.write("    networks:\n")
-        archivo.write("      - testing_net\n\n")
+        archivo.write("      - testing_net\n")
+        archivo.write("    volumes:\n")
+        archivo.write("      - ./server/config.ini:/config.ini\n\n")
+
         
         # Definir los servicios de los clientes
         for i in range(1, int(cantidad_clientes) + 1):
@@ -28,7 +31,9 @@ def generar_compose(nombre_archivo, cantidad_clientes):
             archivo.write("    networks:\n")
             archivo.write("      - testing_net\n")
             archivo.write("    depends_on:\n")
-            archivo.write("      - server\n\n")
+            archivo.write("      - server\n")
+            archivo.write("    volumes:\n")
+            archivo.write("      - ./client/config.yaml:/config.yaml\n\n")
         
         # Definir la red
         archivo.write("networks:\n")
