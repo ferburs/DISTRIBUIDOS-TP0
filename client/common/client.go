@@ -2,14 +2,14 @@ package common
 
 import (
 	"bufio"
-	"fmt"
+	"encoding/json"
+	//"fmt"
 	"net"
-	"time"
-
-	
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
 	"github.com/op/go-logging"
 )
 
@@ -35,7 +35,7 @@ type Client struct {
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
-		done:   make(chan bool,1),
+		done:   make(chan bool, 1),
 	}
 	return client
 }
@@ -51,18 +51,33 @@ func (c *Client) createClientSocket() error {
 			c.config.ID,
 			err,
 		)
+		return err
 	}
 	c.conn = conn
 	return nil
 }
 
+// ReadAll reads all data from the connection until EOF or error
+func (c *Client) readAll() ([]byte, error) {
+	var data []byte
+	reader := bufio.NewReader(c.conn)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			return nil, err
+		}
+		data = append(data, line...)
+	}
+	return data, nil
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	
-	
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
 
 	go func() {
 		sig := <-sigs
@@ -73,39 +88,72 @@ func (c *Client) StartClientLoop() {
 		}
 		c.done <- true
 	}()
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
+
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
-
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
-
+		// Crear el socket de conexión con el servidor
+		err := c.createClientSocket()
 		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+			return
+		}
+
+		// Obtener datos de la apuesta desde las variables de entorno
+		// bet := map[string]string{
+		// 	"agency":        c.config.ID,
+		// 	"NOMBRE":    os.Getenv("NOMBRE"),
+		// 	"APELLIDO":  os.Getenv("APELLIDO"),
+		// 	"DOCUMENTO": os.Getenv("DOCUMENTO"),
+		// 	"NACIMIENTO": os.Getenv("NACIMIENTO"),
+		// 	"NUMERO":    os.Getenv("NUMERO"),
+		// }\
+
+		bet := map[string]string{
+			"agency":        c.config.ID,
+			"NOMBRE":    "Fernandp",
+			"APELLIDO":  "Bursztyn",
+			"DOCUMENTO": "40910427",
+			"NACIMIENTO": "1998-01-17",
+			"NUMERO":    "91218",
+		}
+
+		// Serializar la apuesta a formato JSON
+		betData, err := json.Marshal(bet)
+		if err != nil {
+			log.Errorf("action: serialize_bet | result: fail | client_id: %v | error: %v",
 				c.config.ID,
 				err,
 			)
 			return
 		}
 
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
+		// Enviar la apuesta al servidor evitando short-writes
+		_, err = c.conn.Write(append(betData, '\n'))
+		if err != nil {
+			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
+				c.config.ID,
+				err,
+			)
+			return
+		}
+
+		// Leer la respuesta del servidor
+		_, err = c.readAll()
+		if err != nil {
+			log.Errorf("action: receive_response | result: fail | client_id: %v | error: %v",
+				c.config.ID,
+				err,
+			)
+			return
+		}
+		c.conn.Close()
+
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
+			bet["DOCUMENTO"],
+			bet["NUMERO"],
 		)
 
-		// Wait a time between sending one message and the next one
+		// Esperar un tiempo antes de enviar el siguiente mensaje
 		time.Sleep(c.config.LoopPeriod)
-
 	}
+
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-
-	}
+}

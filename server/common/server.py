@@ -1,6 +1,9 @@
 import socket
 import logging
 import signal
+from common import utils
+
+import json
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -52,12 +55,25 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            # # TODO: Modify the receive to avoid short-reads
+            # msg = client_sock.recv(1024).rstrip().decode('utf-8')
+            # addr = client_sock.getpeername()
+            # logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            # # TODO: Modify the send to avoid short-writes
+            # client_sock.send("{}\n".format(msg).encode('utf-8'))
+
+            msg = self.__recv_all(client_sock).decode('utf-8')
+            bet = json.loads(msg)
+
+            newBet = utils.Bet(bet['agency'], bet['NOMBRE'], bet['APELLIDO'], bet['DOCUMENTO'], bet['NACIMIENTO'], bet['NUMERO'])
+            utils.store_bets([newBet])
+
+            logging.info(f'action: bet accepted | result: success | bet: {bet}')
+
+
+            response = json.dumps({"status": "success"})
+            self.__send_all(client_sock, response.encode('utf-8'))
+
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
@@ -76,3 +92,31 @@ class Server:
         c, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
+
+    def __recv_all(self, sock):
+        """
+        Receive all data from a specific socket
+
+        Function receives all data from a specific socket and returns it
+        """
+        data = b''
+        while True:
+            part = sock.recv(1024)
+            data += part
+            if len(part) < 1024:
+                break
+        return data
+    
+
+    def __send_all(self, sock, data):
+        """
+        Send all data to a specific socket
+
+        Function sends all data to a specific socket
+        """
+        total_sent = 0
+        while total_sent < len(data):
+            sent = sock.send(data[total_sent:])
+            if sent == 0:
+                raise RuntimeError("socket connection broken")
+            total_sent += sent
