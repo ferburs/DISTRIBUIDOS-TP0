@@ -1,21 +1,18 @@
 package common
 
 import (
-	//"bufio"
-	"encoding/json"
-	//"fmt"
+	//"encoding/json"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/op/go-logging"
+	//"github.com/op/go-logging"
 )
 
-var log = logging.MustGetLogger("log")
+//var log = logging.MustGetLogger("log")
 
-// ClientConfig Configuration used by the client
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
@@ -23,15 +20,13 @@ type ClientConfig struct {
 	LoopPeriod    time.Duration
 }
 
-// Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
-	done   chan bool
+	config  ClientConfig
+	conn    net.Conn
+	done    chan bool
+	protocol *Protocol
 }
 
-// NewClient Initializes a new client receiving the configuration
-// as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
@@ -40,57 +35,17 @@ func NewClient(config ClientConfig) *Client {
 	return client
 }
 
-// CreateClientSocket Initializes client socket. In case of
-// failure, error is printed in stdout/stderr and exit 1
-// is returned
 func (c *Client) createClientSocket() error {
 	conn, err := net.Dial("tcp", c.config.ServerAddress)
 	if err != nil {
-		log.Criticalf(
-			"action: connect | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+		log.Criticalf("action: connect | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		return err
 	}
 	c.conn = conn
+	c.protocol = NewProtocol(conn)
 	return nil
 }
 
-
-func (c *Client) WriteData(data []byte) error {
-	totalSent := 0
-	for totalSent < len(data) {
-		n, err := c.conn.Write(data[totalSent:])
-		if err != nil {
-			return err
-		}
-		totalSent += n
-	}
-	return nil
-}
-
-// ReadAll reads all data from the connection until EOF or error
-func (c *Client) readAll() ([]byte, error) {
-	var data []byte
-	for {
-		buf := make([]byte, 1024)
-		n, err := c.conn.Read(buf)
-		if n > 0 {
-			data = append(data, buf[:n]...)
-		}
-		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			}
-			return nil, err
-		}
-	}
-	return data, nil
-}
-
-
-// StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -106,7 +61,6 @@ func (c *Client) StartClientLoop() {
 	}()
 
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Crear el socket de conexión con el servidor
 		err := c.createClientSocket()
 		if err != nil {
 			return
@@ -121,43 +75,22 @@ func (c *Client) StartClientLoop() {
 			"NUMERO":   os.Getenv("NUMERO"),
 		}
 
-		// Serializar la apuesta a formato JSON
-		betData, err := json.Marshal(bet)
+		err = c.protocol.SendBet(bet)
 		if err != nil {
-			log.Errorf("action: serialize_bet | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
+			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return
 		}
 
-		// Enviar la apuesta al servidor evitando short-writes
-		err = c.WriteData(append(betData, '\n'))
+		_, err = c.protocol.ReceiveResponse()
 		if err != nil {
-			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
+			log.Errorf("action: receive_response | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return
 		}
 
-		// Leer la respuesta del servidor
-		_, err = c.readAll()
-		if err != nil {
-			log.Errorf("action: receive_response | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
 		c.conn.Close()
 
-		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-			bet["DOCUMENTO"],
-			bet["NUMERO"],
-		)
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", bet["DOCUMENTO"], bet["NUMERO"])
 
-		// Esperar un tiempo antes de enviar el siguiente mensaje
 		time.Sleep(c.config.LoopPeriod)
 	}
 
