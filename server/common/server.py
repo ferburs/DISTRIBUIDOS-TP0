@@ -57,13 +57,13 @@ class Server:
             )
             utils.store_bets([newBet])
 
-            logging.info(f'action: bet accepted | result: success | bet: {bet}')
+            logging.info(f'action: apuesta almacenada | result: success | dni: {newBet.document}| numero: {newBet.number}') 
 
             # Send success response to client
             protocol.send_message({"status": "success"})
 
-            for bet in utils.load_bets():
-                logging.info(f'action: bet loaded | result: success | bet: {bet}')
+            # for bet in utils.load_bets():
+            #     logging.info(f'action: bet loaded | result: success | bet: {bet}')
 
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
