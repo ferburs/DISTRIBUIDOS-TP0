@@ -96,23 +96,14 @@ func (c *Client) StartClientLoop() {
 			return
 		}
 
-		// Obtener datos de la apuesta desde las variables de entorno
-		// bet := map[string]string{
-		// 	"agency":        c.config.ID,
-		// 	"NOMBRE":    os.Getenv("NOMBRE"),
-		// 	"APELLIDO":  os.Getenv("APELLIDO"),
-		// 	"DOCUMENTO": os.Getenv("DOCUMENTO"),
-		// 	"NACIMIENTO": os.Getenv("NACIMIENTO"),
-		// 	"NUMERO":    os.Getenv("NUMERO"),
-		// }\
 
 		bet := map[string]string{
 			"agency":        c.config.ID,
-			"NOMBRE":    "Fernandp",
-			"APELLIDO":  "Bursztyn",
-			"DOCUMENTO": "40910427",
-			"NACIMIENTO": "1998-01-17",
-			"NUMERO":    "91218",
+			"NOMBRE":    os.Getenv("NOMBRE"),
+			"APELLIDO":   os.Getenv("APELLIDO"),
+			"DOCUMENTO": os.Getenv("DOCUMENTO"),
+			"NACIMIENTO": os.Getenv("NACIMIENTO"),
+			"NUMERO":   os.Getenv("NUMERO"),
 		}
 
 		// Serializar la apuesta a formato JSON
@@ -125,7 +116,6 @@ func (c *Client) StartClientLoop() {
 			return
 		}
 
-		// Enviar la apuesta al servidor evitando short-writes
 		_, err = c.conn.Write(append(betData, '\n'))
 		if err != nil {
 			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
