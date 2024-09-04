@@ -1,7 +1,7 @@
 package common
 
 import (
-	"bufio"
+	//"bufio"
 	"encoding/json"
 	//"fmt"
 	"net"
@@ -57,22 +57,38 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+
+func (c *Client) WriteData(data []byte) error {
+	totalSent := 0
+	for totalSent < len(data) {
+		n, err := c.conn.Write(data[totalSent:])
+		if err != nil {
+			return err
+		}
+		totalSent += n
+	}
+	return nil
+}
+
 // ReadAll reads all data from the connection until EOF or error
 func (c *Client) readAll() ([]byte, error) {
 	var data []byte
-	reader := bufio.NewReader(c.conn)
 	for {
-		line, err := reader.ReadBytes('\n')
+		buf := make([]byte, 1024)
+		n, err := c.conn.Read(buf)
+		if n > 0 {
+			data = append(data, buf[:n]...)
+		}
 		if err != nil {
 			if err.Error() == "EOF" {
 				break
 			}
 			return nil, err
 		}
-		data = append(data, line...)
 	}
 	return data, nil
 }
+
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
@@ -96,7 +112,6 @@ func (c *Client) StartClientLoop() {
 			return
 		}
 
-
 		bet := map[string]string{
 			"agency":        c.config.ID,
 			"NOMBRE":    os.Getenv("NOMBRE"),
@@ -116,7 +131,8 @@ func (c *Client) StartClientLoop() {
 			return
 		}
 
-		_, err = c.conn.Write(append(betData, '\n'))
+		// Enviar la apuesta al servidor evitando short-writes
+		err = c.WriteData(append(betData, '\n'))
 		if err != nil {
 			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
 				c.config.ID,
