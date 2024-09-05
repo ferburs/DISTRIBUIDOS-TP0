@@ -1,3 +1,4 @@
+import errno
 import socket
 import logging
 import signal
