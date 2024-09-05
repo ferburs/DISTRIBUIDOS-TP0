@@ -1,8 +1,9 @@
 package common
 
 import (
-	"encoding/json"
 	"net"
+	"bufio"
+	"io"
 	//"time"
 
 	"github.com/op/go-logging"
@@ -23,10 +24,10 @@ func NewProtocol(conn net.Conn) *Protocol {
 }
 
 // WriteData sends data over the connection, ensuring that all data is written.
-func (p *Protocol) WriteData(data []byte) error {
+func (p *Protocol) WriteData(data string) error {
 	totalSent := 0
 	for totalSent < len(data) {
-		n, err := p.conn.Write(data[totalSent:])
+		n, err := p.conn.Write([]byte(data[totalSent:]))
 		if err != nil {
 			return err
 		}
@@ -36,47 +37,28 @@ func (p *Protocol) WriteData(data []byte) error {
 }
 
 // ReadAll reads all data from the connection until EOF or error.
-func (p *Protocol) ReadAll() ([]byte, error) {
-	var data []byte
-	for {
-		buf := make([]byte, 1024)
-		n, err := p.conn.Read(buf)
-		if n > 0 {
-			data = append(data, buf[:n]...)
-		}
-		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			}
-			return nil, err
-		}
-	}
-	return data, nil
-}
+func (p *Protocol) ReadAll(ID string) (string, error) {
+	var msg string
+    reader := bufio.NewReader(p.conn)
 
-// SerializeBet serializes a bet map to JSON format.
-func SerializeBet(bet map[string]string) ([]byte, error) {
-	return json.Marshal(bet)
-}
+    for {
+        part, err := reader.ReadString('\n')
+        msg += part
 
-// SendBet serializes and sends a bet over the connection.
-func (p *Protocol) SendBet(bet map[string]string) error {
-	betData, err := SerializeBet(bet)
-	if err != nil {
-		log.Errorf("action: serialize_bet | result: fail | error: %v", err)
-		return err
-	}
+        if err == io.EOF {
+            return "", err
+        }
 
-	err = p.WriteData(append(betData, '\n'))
-	if err != nil {
-		log.Errorf("action: send_bet | result: fail | error: %v", err)
-		return err
-	}
+        if err != nil {
+            log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v", ID, err)
+            return "", err
+        }
 
-	return nil
-}
+        // Verificar si los últimos dos caracteres son '\n\n'
+        if len(msg) >= 2 && msg[len(msg)-2:] == "\n\n" {
+            break
+        }
+    }
 
-// ReceiveResponse reads the response from the server.
-func (p *Protocol) ReceiveResponse() ([]byte, error) {
-	return p.ReadAll()
+    return msg, nil
 }

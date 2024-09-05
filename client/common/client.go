@@ -61,36 +61,28 @@ func (c *Client) StartClientLoop() {
 	}()
 
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		err := c.createClientSocket()
-		if err != nil {
-			return
+		c.createClientSocket()
+
+
+		args := []string{
+			os.Getenv("NOMBRE"),
+			os.Getenv("APELLIDO"),
+			os.Getenv("DOCUMENTO"),
+			os.Getenv("NACIMIENTO"),
+			os.Getenv("NUMERO"),
 		}
 
-		bet := map[string]string{
-			"agency":        c.config.ID,
-			"NOMBRE":    os.Getenv("NOMBRE"),
-			"APELLIDO":   os.Getenv("APELLIDO"),
-			"DOCUMENTO": os.Getenv("DOCUMENTO"),
-			"NACIMIENTO": os.Getenv("NACIMIENTO"),
-			"NUMERO":   os.Getenv("NUMERO"),
-		}
+		message := NewMessage(args, c.config.ID)
+		bet := message.Serialize()
+		bet += "\n" 
 
-		err = c.protocol.SendBet(bet)
-		if err != nil {
-			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			return
-		}
+		c.protocol.WriteData(bet)
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", message.DOCUMENTO, message.NUMERO)
 
-		_, err = c.protocol.ReceiveResponse()
-		if err != nil {
-			log.Errorf("action: receive_response | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			return
-		}
 
-		c.conn.Close()
+		//protocol.ReceiveAll(c.config.ID)
 
-		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", bet["DOCUMENTO"], bet["NUMERO"])
-
+		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
 
