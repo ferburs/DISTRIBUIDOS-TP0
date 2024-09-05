@@ -8,6 +8,7 @@ import (
 	"time"
 	"encoding/csv"
 	"fmt"
+	"strings"
 	//"io"
 
 	//"github.com/op/go-logging"
@@ -68,9 +69,10 @@ func (c *Client) StartClientLoop() {
 	//maxTamanio := 8 * 1024
 	kbsize := 1024
 	endofFile := false
+	c.createClientSocket()
 
 	for !endofFile {
-		c.createClientSocket()
+
 		batch := ""
 		for i := 0; i < c.config.BatchMaxSize; i++ {
 			lineRead, err := c.reader.Read()
@@ -99,15 +101,11 @@ func (c *Client) StartClientLoop() {
 		time.Sleep(c.config.LoopPeriod)	
 		}
 	}
-	//log.Infof("SALI OA")
-	c.conn.Close()
 	c.notifyClientDone(c.config.ID)
 	c.waitWinners(c.config.ID)
 }	 
 
 func (c *Client) notifyClientDone(ID string){
-	defer c.conn.Close()
-	c.createClientSocket()
 	err := c.protocol.NotifyDone(ID)
 	if err != nil {
 		log.Errorf("action: notify_done | result: fail | client_id: %v | error: %v",ID, err)
@@ -116,28 +114,34 @@ func (c *Client) notifyClientDone(ID string){
 }
 
 func (c *Client) waitWinners(ID string){
-	defer c.conn.Close()
-	for{ 
-		c.createClientSocket()
-		msg := fmt.Sprintf("%v#REQUEST_WINNERS\n\n", ID)
-		err := c.protocol.WriteData(msg)
 
-		if err != nil {
-			log.Infof("action: request_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			c.conn.Close()
-			time.Sleep(6 * time.Second)
-			continue
-		}
-		log.Infof("action: request_winners | result: success | client_id: %v", c.config.ID)
+	println("cliet envia esperando ganadores")
 
-		response, err := c.protocol.ReadAll(c.config.ID)
-		if err != nil {
-			log.Errorf("action: aaaread_all | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			c.conn.Close()
-			time.Sleep(6 * time.Second)
-			continue
-		}
-		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", response)
-		break
+	msg := fmt.Sprintf("%v#REQUEST_WINNERS\n\n", ID)
+	err := c.protocol.WriteData(msg)
+
+	if err != nil {
+		log.Infof("action: request_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		c.conn.Close()
+		time.Sleep(6 * time.Second)
 	}
+	log.Infof("action: request_winners | result: success | client_id: %v", c.config.ID)
+
+	response, err := c.protocol.ReadAll(c.config.ID)
+	if err != nil {
+		log.Errorf("action: read_all | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		c.conn.Close()
+		time.Sleep(6 * time.Second)
+	}
+
+	//Saco los \n del final
+	winners := response[:len(response)-2]
+	//println(winners)
+	var totalWinners int
+	if len(winners) == 0 {
+		totalWinners = 0
+	} else {
+		totalWinners = len(strings.Split(winners, "\n"))
+	}
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", totalWinners)
 }

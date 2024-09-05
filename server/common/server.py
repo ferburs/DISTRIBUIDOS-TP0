@@ -1,6 +1,7 @@
 import socket
 import logging
 import signal
+import multiprocessing
 from .utils import store_bets, load_bets, has_won
 from .protocol import Protocol
 from .message import Message
@@ -8,7 +9,7 @@ from .message import Message
 import json
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, total_clients):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
@@ -17,6 +18,8 @@ class Server:
         self._agency_notifications = 0
         self.winners = {}
         self.clientsReady = False
+        self.connected_clients = []
+        self.total_clients = int(total_clients)
 
         signal.signal(signal.SIGINT, self.graceful_shutdown)
         signal.signal(signal.SIGTERM, self.graceful_shutdown)
@@ -34,10 +37,18 @@ class Server:
         """
         Server loop to accept new connections and handle communication
         """
+
+        lock_bets = multiprocessing.Lock()
+        barrier = multiprocessing.Barrier(self.total_clients)
+
         while self._running:
             try:
                 client_sock = self.__accept_new_connection()
-                self.__handle_client_connection(client_sock)
+
+                client_process = multiprocessing.Process(target=self.__handle_client_connection, args=(client_sock, lock_bets, barrier))
+                self.connected_clients.append(client_process)
+
+                client_process.start()
             except OSError:
                 logging.error("action: server_run | result: stopped")
 
@@ -54,54 +65,68 @@ class Server:
     
 
     
-    def __handle_client_connection(self, client_sock):
+    def __handle_client_connection(self, client_sock, betLock, barrier):
 
         """
         Handle communication with a client
         """
-        protocol = Protocol(client_sock)
-        msg = protocol.recv_all()
-        newMessage = Message(msg)
+        process_client_running = True
 
-        #logging.info(f"\n\n mensaje: {msg} \n\n ")
-        try:
-            if msg.__contains__("NOTIFY_DONE"):
-                logging.info(f"msg: {msg}")
-                self._agency_notifications += 1
-                logging.info(f"action: notify_received | result: success | notified_agencies: {self._agency_notifications}/2")
+        while process_client_running and self._running:
 
-                if self._agency_notifications == 5:
-                    #logging.info("ARRANCA O NO ARRANCA EL SORTEO. SIEMPRE ARRACA CON BUJIAS JECHER")
-                    logging.info("action: sorteo | result: success")
-                    self.clientsReady = True
+            protocol = Protocol(client_sock)
+            msg = protocol.recv_all()
+            newMessage = Message(msg)
 
-            elif msg.__contains__("REQUEST_WINNERS"):
-                #logging.info(f"msg: {msg}")
-                ID = newMessage.deserializeRequestWinners()
-                #print(f"ID: {ID}")
-                if not self.clientsReady:
-                    #print("No se puede enviar los ganadores")
-                    client_sock.close()
-                else:
-                    #print("Se puede enviar los ganadores")
-                    all_bets = load_bets()
-                    agency_bets_count = sum(1 for bet in all_bets if bet.agency == int(ID) and has_won(bet))
-                    #print(f"agency_bets_count: {agency_bets_count}")
-                    protocol.winnerToAgency(agency_bets_count)
 
-            else:
-                #newMessage = Message(msg)
-                bets = newMessage.deserialize()
+            #while process_client_running and self._running:
+            try:
+                if msg.__contains__("NOTIFY_DONE"):
+                    barrier.wait()
+                    logging.info(f"msg: {msg}")
+                    #self._agency_notifications += 1
+                    #logging.info(f"action: notify_received | result: success | notified_agencies: {self._agency_notifications}/2")
 
-                store_bets(bets)
+                    # if self._agency_notifications == 5:
+                    #     logging.info("action: sorteo | result: success")
+                    #     self.clientsReady = True
 
-                total_bets = 0 
-                for bet in load_bets():
-                    total_bets += 1
+                elif msg.__contains__("REQUEST_WINNERS"):
+                    print("server entra a request winners")
                 
-                logging.info(f"action: apuestas_almacenadas | result: success | cantidad de apuestas: {len(bets)} | cant totales: {total_bets}")
-        except OSError as e:
-                    logging.error("action: receive_message | result: fail | error: {e}")
-        finally:
-                client_sock.close()
+                    ID = newMessage.deserializeRequestWinners()
+                    #print(f"ID: {ID}")
+                    # if not self.clientsReady:
+                    #     #print("No se puede enviar los ganadores")
+                    #     client_sock.close()
+                    # else:
+                    #     #print("Se puede enviar los ganadores")
+                    winners = []
+                    with betLock:
+                        all_bets = load_bets()
+                    for bet in all_bets:
+                        if bet.agency == int(ID) and has_won(bet):
+                            winners.append(bet.document)
+                    #print(f"agency_bets_count: {agency_bets_count}")
+                    protocol.winnerToAgency(winners)
+                    process_client_running = False
+
+                else:
+                    #newMessage = Message(msg)
+                    bets = newMessage.deserialize()
+                    #print(f"bets: {bets}")
+
+                    with betLock:
+                        store_bets(bets)
+
+                    total_bets = 0 
+                    for bet in load_bets():
+                        total_bets += 1
+                    
+                    logging.info(f"action: apuestas_almacenadas | result: success | cantidad de apuestas: {len(bets)} | cant totales: {total_bets}")
+            except OSError as e:
+                        logging.error("action: receive_message | result: fail | error: {e}")
+            #finally:
+        client_sock.close()
+        
 

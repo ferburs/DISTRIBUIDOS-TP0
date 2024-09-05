@@ -44,11 +44,11 @@ class Protocol:
                 raise RuntimeError("socket connection broken")
             total_sent += sent
 
-    def winnerToAgency(self,agency_bets_count):
+    def winnerToAgency(self,listWinners):
         """
         Send the winner count to the client
         """
-        msg = str(agency_bets_count) + "\n"
+        msg = "\n".join(listWinners) + "\n\n"
         #print (f"msg: {msg}")
         self.send_all(msg.encode('utf-8'))
         #self.sock.send(str(agency_bets_count).encode('utf-8') + "\n".encode('utf-8'))
