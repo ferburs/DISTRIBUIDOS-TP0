@@ -8,6 +8,7 @@ import (
 	"time"
 	"encoding/csv"
 	"fmt"
+	"strings"
 	//"io"
 
 	//"github.com/op/go-logging"
@@ -132,12 +133,22 @@ func (c *Client) waitWinners(ID string){
 
 		response, err := c.protocol.ReadAll(c.config.ID)
 		if err != nil {
-			log.Errorf("action: aaaread_all | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			log.Errorf("action: read_all | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			c.conn.Close()
 			time.Sleep(6 * time.Second)
 			continue
 		}
-		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", response)
+
+		//Saco los \n del final
+		winners := response[:len(response)-2]
+		#println(winners)
+		var totalWinners int
+		if len(winners) == 0 {
+			totalWinners = 0
+		} else {
+			totalWinners = len(strings.Split(winners, "\n"))
+		}
+		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", totalWinners)
 		break
 	}
 }

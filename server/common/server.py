@@ -1,9 +1,11 @@
 import socket
 import logging
 import signal
+import multiprocessing
 from .utils import store_bets, load_bets, has_won
 from .protocol import Protocol
 from .message import Message
+
 
 import json
 
@@ -15,7 +17,7 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self._running = True
         self._agency_notifications = 0
-        self.winners = {}
+        #self.winners = []
         self.clientsReady = False
 
         signal.signal(signal.SIGINT, self.graceful_shutdown)
@@ -84,10 +86,13 @@ class Server:
                     client_sock.close()
                 else:
                     #print("Se puede enviar los ganadores")
+                    winners = []
                     all_bets = load_bets()
-                    agency_bets_count = sum(1 for bet in all_bets if bet.agency == int(ID) and has_won(bet))
+                    for bet in all_bets:
+                        if bet.agency == int(ID) and has_won(bet):
+                            winners.append(bet.document)
                     #print(f"agency_bets_count: {agency_bets_count}")
-                    protocol.winnerToAgency(agency_bets_count)
+                    protocol.winnerToAgency(winners)
 
             else:
                 #newMessage = Message(msg)

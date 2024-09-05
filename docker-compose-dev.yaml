@@ -39,7 +39,7 @@ services:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
-
+      
   client3:
     container_name: client3
     image: client:latest
@@ -81,6 +81,8 @@ services:
       - server
     volumes:
       - ./client/config.yaml:/config.yaml
+
+
       
 networks:
   testing_net:

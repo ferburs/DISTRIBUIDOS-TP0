@@ -4,7 +4,7 @@ import (
 	"net"
 	"bufio"
 	"fmt"
-	//"io"
+	"io"
 
 	"github.com/op/go-logging"
 )
@@ -39,24 +39,28 @@ func (p *Protocol) WriteData(data string) error {
 // ReadAll reads all data from the connection until EOF or error.
 func (p *Protocol) ReadAll(ID string) (string, error) {
 	var msg string
-	readBuffer := bufio.NewReader(p.conn)
-	for {
-		line, err := readBuffer.ReadString('\n')
-		//log.Infof("La linea es %s", line)
-		// if err == io.EOF && line != "" {
-		// 	print("entro al end of file")
-		// 	msg += line
-		// 	return msg, err
-		// }
-		if err != nil {
-			log.Errorf("action: read_all | result: fail | client_id: %s | error: %v", ID, err)
-			return "", err
-		}
-		msg += line
-		break
-	}
-	log.Infof("action: read_all | result: success | client_id: %s | message: %s", ID, msg)	
-	return msg, nil
+    reader := bufio.NewReader(p.conn)
+
+    for {
+        part, err := reader.ReadString('\n')
+        msg += part
+
+        if err == io.EOF {
+            return "", err
+        }
+
+        if err != nil {
+            log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v", ID, err)
+            return "", err
+        }
+
+        // Verificar si los últimos dos caracteres son '\n\n'
+        if len(msg) >= 2 && msg[len(msg)-2:] == "\n\n" {
+            break
+        }
+    }
+
+    return msg, nil
 }
 
 
