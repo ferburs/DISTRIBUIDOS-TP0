@@ -76,15 +76,8 @@ class Server:
         """
 
         # Connection arrived
-        logging.info('action: accept_connections | result: in_progress')
 
-        try:
-            c, addr = self._server_socket.accept()
-            logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
-            return c
-        except OSError as e:
-            if e.errno == errno.EBADF:
-                logging.info("SOCKET CLOSE")
-                return None
-            else:
-                raise
+        logging.info('action: accept_connections | result: in_progress')
+        c, addr = self._server_socket.accept()
+        logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+        return c
