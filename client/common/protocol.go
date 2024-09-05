@@ -3,6 +3,8 @@ package common
 import (
 	"net"
 	"bufio"
+	"fmt"
+	//"io"
 
 	"github.com/op/go-logging"
 )
@@ -40,11 +42,18 @@ func (p *Protocol) ReadAll(ID string) (string, error) {
 	readBuffer := bufio.NewReader(p.conn)
 	for {
 		line, err := readBuffer.ReadString('\n')
+		log.Infof("La linea es %s", line)
+		// if err == io.EOF && line != "" {
+		// 	print("entro al end of file")
+		// 	msg += line
+		// 	return msg, err
+		// }
 		if err != nil {
 			log.Errorf("action: read_all | result: fail | client_id: %s | error: %v", ID, err)
 			return "", err
 		}
 		msg += line
+		break
 	}
 	log.Infof("action: read_all | result: success | client_id: %s | message: %s", ID, msg)	
 	return msg, nil
@@ -76,3 +85,21 @@ func (p *Protocol) ReadAll(ID string) (string, error) {
 // func (p *Protocol) ReceiveResponse() ([]byte, error) {
 // 	return p.ReadAll()
 // }
+
+
+func (p *Protocol) NotifyDone(ID string) error {
+	msg := fmt.Sprintf("%v#NOTIFY_DONE\n\n", ID)
+	err := p.WriteData(msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Protocol) RequestWinners() error {
+	err := p.WriteData("REQUEST_WINNERS\n\n")
+	if err != nil {
+		return err
+	}
+	return nil
+}
