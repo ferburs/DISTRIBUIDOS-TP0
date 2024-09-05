@@ -2,6 +2,7 @@ import errno
 import socket
 import logging
 import signal
+import threading
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -10,6 +11,7 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._running = True
+        self.shutdown_event = threading.Event()
 
         signal.signal(signal.SIGINT, self.graceful_shutdown)
         signal.signal(signal.SIGTERM, self.graceful_shutdown)
@@ -21,8 +23,8 @@ class Server:
 
         Function that closes the server socket and exits the program
         """
-        logging.info("action: graceful_shutdown | result: in_progress")
         self._running = False
+        self.shutdown_event.set()
         self._server_socket.close()
         logging.info("action: graceful_shutdown | result: success")
         #sys.exit(0)
