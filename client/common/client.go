@@ -1,12 +1,12 @@
 package common
 
 import (
-	//"encoding/json"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+	"encoding/csv"
 
 	//"github.com/op/go-logging"
 )
@@ -63,28 +63,41 @@ func (c *Client) StartClientLoop() {
 		c.done <- true
 	}()
 
-	maxTamanio = 8 * 1024
+	//maxTamanio := 8 * 1024
+	kbsize := 1024
 	endofFile := false
 
 	for !endofFile {
 		c.createClientSocket()
-		batch = ""
-		for i := 0; i <= c.config.BathMaxmount; i++ {
+		batch := ""
+		for i := 0; i < c.config.BatchMaxSize; i++ {
 			lineRead, err := c.reader.Read()
+			//log.Infof("LA LINEA ES line: %v", lineRead)
+			//log.Infof("nombre: %v", lineRead[0])
+			//log.Infof("apellido: %v", lineRead[1])
 			if lineRead == nil {
 				endofFile = true
 				break
 			}
-			betMessage := createMessage(lineRead, c.config.ID)
+			if err != nil {
+				log.Errorf("action: read_line | result: fail | client_id: %v | error: %v", c.config.ID, err)
+				endofFile = true
+				break
+			}
+
+			betMessage := NewMessage(lineRead, c.config.ID)
 			messageSerialized := betMessage.Serialize()
+			//log.Infof("mensaje serializadooooooooooo: %v", messageSerialized)
+			batch += messageSerialized
 			}
 		batch += "\n"
+		//log.Infof("batch: %v", batch)
 
 		err := c.protocol.WriteData(batch)
 		if err != nil {
 			log.Errorf("action: send_batch | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		} else {
-			log.Infof("action: send_batch | result: success | client_id: %v | batch_size: %v", c.config.ID, len(batch) / maxTamanio)
+			log.Infof("action: send_batch | result: success | client_id: %v | batch_size: %v", c.config.ID, float64(len(batch)) / float64(kbsize))
 		time.Sleep(c.config.LoopPeriod)	
 	}
 
@@ -92,9 +105,9 @@ func (c *Client) StartClientLoop() {
 	}
 }	 
 
-func createMessage(line []string, agency string) map[string]string {
-	return NewMessage(agency, line[0], line[1], line[2], line[3], line[4])
-}
+// func createMessage(line []string, agency string) map[string]string {
+// 	return NewMessage(agency, line[0], line[1], line[2], line[3], line[4])
+// }
 
 func verifySize(message string, maxTamanio int) bool {
 	return len(message) <= maxTamanio

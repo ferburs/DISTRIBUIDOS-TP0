@@ -1,5 +1,7 @@
+from .utils import Bet
+
 class Message:
-    def init (self, message):
+    def __init__ (self, message):
         self.bets = message 
 
 
@@ -11,6 +13,6 @@ class Message:
         bets = []
 
         for bet in betstring:
-            betArg = bet.split('-')
-            bets.append(Bet(betArg[0], betArg[1], betArg[2], betArg[3],betArg[4],betArg[5]))
+            betArg = bet.split('#')
+            bets.append(Bet(betArg[0], betArg[1], betArg[2], betArg[3],betArg[4], betArg[5]))
         return bets

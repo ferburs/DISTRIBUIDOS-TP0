@@ -52,12 +52,14 @@ class Server:
 
         total_bets = 0 
         for bet in load_bets():
-            cant_bets += 1
+            total_bets += 1
         
-        logging.info("action: apuestas almacenadas | result: success | cantidad de apuestas: {len(bets)} | cant totales: {cant_bets}")
+  
+        logging.info(f"action: apuestas_almacenadas | result: success | cantidad de apuestas: {len(bets)} | cant totales: {total_bets}")
 
+        
 
-
+        
 
     def __accept_new_connection(self):
         """

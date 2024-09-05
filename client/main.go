@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"archive/zip"
+	"encoding/csv"
 
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
@@ -109,17 +110,20 @@ func main() {
 		ID:            v.GetString("id"),
 		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
-		BathMaxAmount: v.GetInt("bath.maxAmount"),
+		BatchMaxSize: v.GetInt("batch.maxAmount"),
 	}
 
-	zipFile, err := v.openZipFile("data/dataset.zip")
+	zipFile, err := openZipFile("data/dataset.zip")
 	if err != nil {
 		log.Criticalf("action: open_zip_file | result: fail | error: %v", err)
 	}
 	defer zipFile.Close()
 
 
-	agencyCSV, err := openAgencyCSV(zipFile)
+	agencyCSVFile, err := openAgencyCSV(zipFile, clientConfig.ID)
+
+	agencyCSV, err := agencyCSVFile.Open()
+
 	if err != nil {
 		log.Criticalf("action: open_agency_csv | result: fail | error: %v", err)
 	}
@@ -134,7 +138,7 @@ func main() {
 func openZipFile(zipFile string) (*zip.ReadCloser, error) {
 	// Open the zip file
 	
-	path = fmt.Sprintf("./%s", zipFile)
+	path := fmt.Sprintf("./%s", zipFile)
 
 	zipReader, err := zip.OpenReader(path)
 
@@ -146,10 +150,10 @@ func openZipFile(zipFile string) (*zip.ReadCloser, error) {
 
 }
 
-func openAgencyCSV(zipFile *zip.ReadCloser) (*zip.File, error) {
+func openAgencyCSV(zipFile *zip.ReadCloser, ID string) (*zip.File, error) {
 	// Open the csv file
 	for _, file := range zipFile.File {
-		if file.Name == fmt.Sprintf("agency-%v.csv", clientConfig.ID) {
+		if file.Name == fmt.Sprintf("agency-%v.csv", ID) {
 			return file, nil
 		}
 	}

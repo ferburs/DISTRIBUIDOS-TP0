@@ -1,5 +1,10 @@
+package common
 
-type message struct {
+import (
+	"fmt"
+)
+
+type Message struct {
 	AGENCIA string
 	NOMBRE string
 	APELLIDO string
@@ -8,20 +13,22 @@ type message struct {
 	NUMERO string
 }
 
-func NewMessage(AGENCIA, NOMBRE, APELLIDO, DOCUMENTO, NACIMIENTO, NUMERO string) *message {
-	return &message{
-		AGENCIA: AGENCIA,
-		NOMBRE: NOMBRE,
-		APELLIDO: APELLIDO,
-		DOCUMENTO: DOCUMENTO,
-		NACIMIENTO: NACIMIENTO,
-		NUMERO: NUMERO,
+func NewMessage(args []string, agency string) *Message {
+
+	message := &Message{
+		AGENCIA: agency,
+		NOMBRE: args[0],
+		APELLIDO:args[1],
+		DOCUMENTO: args[2],
+		NACIMIENTO: args[3],
+		NUMERO: args[4],
 	}
+	return message
 }
 
-func (message *message) Serialize() string{
+func (message *Message) Serialize() string{
 	return fmt.Sprintf(
-		"%s-%s-%s-%s-%s-%s\n",
+		"%s#%s#%s#%s#%s#%s\n",
 		message.AGENCIA,
 		message.NOMBRE,
 		message.APELLIDO,

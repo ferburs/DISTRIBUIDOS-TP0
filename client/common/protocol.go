@@ -1,7 +1,6 @@
 package common
 
 import (
-	"encoding/json"
 	"net"
 	"bufio"
 
@@ -26,7 +25,7 @@ func NewProtocol(conn net.Conn) *Protocol {
 func (p *Protocol) WriteData(data string) error {
 	totalSent := 0
 	for totalSent < len(data) {
-		n, err := p.conn.Write([]byte(msg[sentBytes:]))
+		n, err := p.conn.Write([]byte(data[totalSent:]))
 		if err != nil {
 			return err
 		}
@@ -36,7 +35,7 @@ func (p *Protocol) WriteData(data string) error {
 }
 
 // ReadAll reads all data from the connection until EOF or error.
-func (p *Protocol) ReadAll(ID sting) (string, error) {
+func (p *Protocol) ReadAll(ID string) (string, error) {
 	var msg string
 	readBuffer := bufio.NewReader(p.conn)
 	for {
@@ -52,28 +51,28 @@ func (p *Protocol) ReadAll(ID sting) (string, error) {
 }
 
 // SerializeBet serializes a bet map to JSON format.
-func SerializeBet(bet map[string]string) ([]byte, error) {
-	return json.Marshal(bet)
-}
+// func SerializeBet(bet map[string]string) ([]byte, error) {
+// 	return json.Marshal(bet)
+// }
 
-// SendBet serializes and sends a bet over the connection.
-func (p *Protocol) SendBet(bet map[string]string) error {
-	betData, err := SerializeBet(bet)
-	if err != nil {
-		log.Errorf("action: serialize_bet | result: fail | error: %v", err)
-		return err
-	}
+// // SendBet serializes and sends a bet over the connection.
+// func (p *Protocol) SendBet(bet map[string]string) error {
+// 	betData, err := SerializeBet(bet)
+// 	if err != nil {
+// 		log.Errorf("action: serialize_bet | result: fail | error: %v", err)
+// 		return err
+// 	}
 
-	err = p.WriteData(append(betData, '\n'))
-	if err != nil {
-		log.Errorf("action: send_bet | result: fail | error: %v", err)
-		return err
-	}
+// 	err = p.WriteData(append(betData, '\n'))
+// 	if err != nil {
+// 		log.Errorf("action: send_bet | result: fail | error: %v", err)
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // ReceiveResponse reads the response from the server.
-func (p *Protocol) ReceiveResponse() ([]byte, error) {
-	return p.ReadAll()
-}
+// func (p *Protocol) ReceiveResponse() ([]byte, error) {
+// 	return p.ReadAll()
+// }
