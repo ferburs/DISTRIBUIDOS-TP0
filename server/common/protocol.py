@@ -49,6 +49,6 @@ class Protocol:
         Send the winner count to the client
         """
         msg = str(agency_bets_count) + "\n"
-        print (f"msg: {msg}")
+        #print (f"msg: {msg}")
         self.send_all(msg.encode('utf-8'))
         #self.sock.send(str(agency_bets_count).encode('utf-8') + "\n".encode('utf-8'))

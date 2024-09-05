@@ -59,33 +59,6 @@ func (p *Protocol) ReadAll(ID string) (string, error) {
 	return msg, nil
 }
 
-// SerializeBet serializes a bet map to JSON format.
-// func SerializeBet(bet map[string]string) ([]byte, error) {
-// 	return json.Marshal(bet)
-// }
-
-// // SendBet serializes and sends a bet over the connection.
-// func (p *Protocol) SendBet(bet map[string]string) error {
-// 	betData, err := SerializeBet(bet)
-// 	if err != nil {
-// 		log.Errorf("action: serialize_bet | result: fail | error: %v", err)
-// 		return err
-// 	}
-
-// 	err = p.WriteData(append(betData, '\n'))
-// 	if err != nil {
-// 		log.Errorf("action: send_bet | result: fail | error: %v", err)
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// ReceiveResponse reads the response from the server.
-// func (p *Protocol) ReceiveResponse() ([]byte, error) {
-// 	return p.ReadAll()
-// }
-
 
 func (p *Protocol) NotifyDone(ID string) error {
 	msg := fmt.Sprintf("%v#NOTIFY_DONE\n\n", ID)
