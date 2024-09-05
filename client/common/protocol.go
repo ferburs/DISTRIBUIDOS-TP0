@@ -42,7 +42,7 @@ func (p *Protocol) ReadAll(ID string) (string, error) {
 	readBuffer := bufio.NewReader(p.conn)
 	for {
 		line, err := readBuffer.ReadString('\n')
-		log.Infof("La linea es %s", line)
+		//log.Infof("La linea es %s", line)
 		// if err == io.EOF && line != "" {
 		// 	print("entro al end of file")
 		// 	msg += line

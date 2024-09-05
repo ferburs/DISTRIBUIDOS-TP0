@@ -70,23 +70,23 @@ class Server:
                 self._agency_notifications += 1
                 logging.info(f"action: notify_received | result: success | notified_agencies: {self._agency_notifications}/2")
 
-                if self._agency_notifications == 2:
+                if self._agency_notifications == 5:
                     #logging.info("ARRANCA O NO ARRANCA EL SORTEO. SIEMPRE ARRACA CON BUJIAS JECHER")
                     logging.info("action: sorteo | result: success")
                     self.clientsReady = True
 
             elif msg.__contains__("REQUEST_WINNERS"):
-                logging.info(f"msg: {msg}")
+                #logging.info(f"msg: {msg}")
                 ID = newMessage.deserializeRequestWinners()
                 #print(f"ID: {ID}")
                 if not self.clientsReady:
-                    print("No se puede enviar los ganadores")
+                    #print("No se puede enviar los ganadores")
                     client_sock.close()
                 else:
-                    print("Se puede enviar los ganadores")
+                    #print("Se puede enviar los ganadores")
                     all_bets = load_bets()
                     agency_bets_count = sum(1 for bet in all_bets if bet.agency == int(ID) and has_won(bet))
-                    print(f"agency_bets_count: {agency_bets_count}")
+                    #print(f"agency_bets_count: {agency_bets_count}")
                     protocol.winnerToAgency(agency_bets_count)
 
             else:
