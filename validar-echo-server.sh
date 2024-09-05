@@ -10,7 +10,7 @@ RESPONSE=$(docker run --rm --network tp0_testing_net busybox sh -c "echo \"$MESS
 
 # Verificar si la respuesta coincide con el mensaje enviado
 if [ "$RESPONSE" = "$MESSAGE" ]; then
-  action: test_echo_server | result: success
+  echo "action: test_echo_server | result: success"
 else
-  action: test_echo_server | result: fail
+  echo "action: test_echo_server | result: fail"
 fi
