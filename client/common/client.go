@@ -6,10 +6,6 @@ import (
 	"net"
 	"time"
 
-	
-	"os"
-	"os/signal"
-	"syscall"
 	"github.com/op/go-logging"
 )
 
@@ -27,7 +23,6 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
-	done   chan bool
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -35,7 +30,6 @@ type Client struct {
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
-		done:   make(chan bool,1),
 	}
 	return client
 }
@@ -58,21 +52,6 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	
-	
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-
-	go func() {
-		sig := <-sigs
-		log.Infof("action: graceful_shutdown | result: success | client_id: %v | signal: %v", c.config.ID, sig)
-		if c.conn != nil {
-			c.conn.Close()
-			log.Infof("action: close_connection | result: success | client_id: %v", c.config.ID)
-		}
-		c.done <- true
-	}()
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
@@ -107,5 +86,4 @@ func (c *Client) StartClientLoop() {
 
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-
-	}
+}

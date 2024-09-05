@@ -1,6 +1,6 @@
 import socket
 import logging
-import signal
+
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -8,23 +8,6 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
-        self._running = True
-
-        signal.signal(signal.SIGINT, self.graceful_shutdown)
-        signal.signal(signal.SIGTERM, self.graceful_shutdown)
-
-    
-    def graceful_shutdown(self, signum, frame):
-        """
-        Graceful shutdown of the server
-
-        Function that closes the server socket and exits the program
-        """
-        logging.info("action: graceful_shutdown | result: in_progress")
-        self._running = False
-        self._server_socket.close()
-        logging.info("action: graceful_shutdown | result: success")
-        #sys.exit(0)
 
     def run(self):
         """
@@ -37,12 +20,9 @@ class Server:
 
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
-        while self._running:
-            try:
-                client_sock = self.__accept_new_connection()
-                self.__handle_client_connection(client_sock)
-            except OSError: 
-                logging.error("action: server_run | result: stopped")
+        while True:
+            client_sock = self.__accept_new_connection()
+            self.__handle_client_connection(client_sock)
 
     def __handle_client_connection(self, client_sock):
         """
