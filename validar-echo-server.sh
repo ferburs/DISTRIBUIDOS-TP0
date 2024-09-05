@@ -6,19 +6,11 @@ PORT="12345"
 MESSAGE="Hello World!"
 
 # Obtener la dirección IP del contenedor
-SERVER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$SERVER_CONTAINER")
-
-# Enviar el mensaje al servidor usando netcat y guardar la respuesta
-RESPONSE=$(echo "$MESSAGE" | nc "$SERVER_IP" "$PORT")
-
-# Imprimir la respuesta recibida
-echo "$RESPONSE"
+RESPONSE=$(docker run --rm --network tp0_testing_net busybox sh -c "echo \"$MESSAGE\" | nc \"$SERVER_CONTAINER\" \"$PORT\"")
 
 # Verificar si la respuesta coincide con el mensaje enviado
 if [ "$RESPONSE" = "$MESSAGE" ]; then
-  echo "OK"
+  action: test_echo_server | result: success
 else
-  echo "ERROR"
-  echo "Expected: $MESSAGE"
-  echo "Received: $RESPONSE"
+  action: test_echo_server | result: fail
 fi
