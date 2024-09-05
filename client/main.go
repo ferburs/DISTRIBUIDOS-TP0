@@ -111,21 +111,5 @@ func main() {
 	}
 
 	client := common.NewClient(clientConfig)
-
-
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-
-	go func() {
-		sig := <-sigs
-		log.Infof("action: graceful_shutdown | result: success | client_id: %v | signal: %v", c.config.ID, sig)
-		if c.conn != nil {
-			c.conn.Close()
-			log.Infof("action: close_connection | result: success | client_id: %v", c.config.ID)
-		}
-		c.done <- true
-	}()
-	
 	client.StartClientLoop()
 }
