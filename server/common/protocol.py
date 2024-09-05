@@ -18,19 +18,22 @@ class Protocol:
         data = json.dumps(message).encode('utf-8')
         self.__send_all(data)
 
-    def __recv_all(self):
+    def recv_all(self):
         """
         Receive all data from the socket
         """
         data = b''
         while True:
             part = self.sock.recv(1024)
-            data += part
-            if len(part) < 1024:
+            if not part:
                 break
-        return data
+            data += part
+            if b'\n\n' in data:
+                break
+                
+        return data[:data.find(b'\n\n')].strip().decode('utf-8')
 
-    def __send_all(self, data):
+    def send_all(self, data):
         """
         Send all data to the socket
         """

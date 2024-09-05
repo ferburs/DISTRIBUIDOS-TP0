@@ -18,6 +18,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopAmount    int
 	LoopPeriod    time.Duration
+	BatchMaxSize     int
 }
 
 type Client struct {
@@ -25,12 +26,14 @@ type Client struct {
 	conn    net.Conn
 	done    chan bool
 	protocol *Protocol
+	reader *csv.Reader
 }
 
-func NewClient(config ClientConfig) *Client {
+func NewClient(config ClientConfig, reader *csv.Reader) *Client {
 	client := &Client{
 		config: config,
 		done:   make(chan bool, 1),
+		reader: reader,
 	}
 	return client
 }
@@ -60,39 +63,39 @@ func (c *Client) StartClientLoop() {
 		c.done <- true
 	}()
 
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		err := c.createClientSocket()
+	maxTamanio = 8 * 1024
+	endofFile := false
+
+	for !endofFile {
+		c.createClientSocket()
+		batch = ""
+		for i := 0; i <= c.config.BathMaxmount; i++ {
+			lineRead, err := c.reader.Read()
+			if lineRead == nil {
+				endofFile = true
+				break
+			}
+			betMessage := createMessage(lineRead, c.config.ID)
+			messageSerialized := betMessage.Serialize()
+			}
+		batch += "\n"
+
+		err := c.protocol.WriteData(batch)
 		if err != nil {
-			return
-		}
-
-		bet := map[string]string{
-			"agency":        c.config.ID,
-			"NOMBRE":    os.Getenv("NOMBRE"),
-			"APELLIDO":   os.Getenv("APELLIDO"),
-			"DOCUMENTO": os.Getenv("DOCUMENTO"),
-			"NACIMIENTO": os.Getenv("NACIMIENTO"),
-			"NUMERO":   os.Getenv("NUMERO"),
-		}
-
-		err = c.protocol.SendBet(bet)
-		if err != nil {
-			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			return
-		}
-
-		_, err = c.protocol.ReceiveResponse()
-		if err != nil {
-			log.Errorf("action: receive_response | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			return
-		}
-
-		c.conn.Close()
-
-		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", bet["DOCUMENTO"], bet["NUMERO"])
-
-		time.Sleep(c.config.LoopPeriod)
+			log.Errorf("action: send_batch | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		} else {
+			log.Infof("action: send_batch | result: success | client_id: %v | batch_size: %v", c.config.ID, len(batch) / maxTamanio)
+		time.Sleep(c.config.LoopPeriod)	
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	}
+}	 
+
+func createMessage(line []string, agency string) map[string]string {
+	return NewMessage(agency, line[0], line[1], line[2], line[3], line[4])
+}
+
+func verifySize(message string, maxTamanio int) bool {
+	return len(message) <= maxTamanio
 }

@@ -1,8 +1,9 @@
 import socket
 import logging
 import signal
-from common import utils
+from .utils import store_bets, load_bets
 from .protocol import Protocol
+from .message import Message
 
 import json
 
@@ -38,39 +39,25 @@ class Server:
                 logging.error("action: server_run | result: stopped")
 
     def __handle_client_connection(self, client_sock):
+
         """
         Handle communication with a client
         """
         protocol = Protocol(client_sock)
-        try:
-            # Receive bet data from client
-            bet = protocol.recv_message()
+        msg = protocol.recv_all()
+        newMessage = Message(msg)
+        bets = newMessage.deserialize()
 
-            # Process and store bet
-            newBet = utils.Bet(
-                bet['agency'], 
-                bet['NOMBRE'], 
-                bet['APELLIDO'], 
-                bet['DOCUMENTO'], 
-                bet['NACIMIENTO'], 
-                bet['NUMERO']
-            )
-            utils.store_bets([newBet])
+        store_bets(bets)
 
-            logging.info(f'action: apuesta almacenada | result: success | dni: {newBet.document}| numero: {newBet.number}') 
+        total_bets = 0 
+        for bet in load_bets():
+            cant_bets += 1
+        
+        logging.info("action: apuestas almacenadas | result: success | cantidad de apuestas: {len(bets)} | cant totales: {cant_bets}")
 
-            # Send success response to client
-            protocol.send_message({"status": "success"})
 
-            # for bet in utils.load_bets():
-            #     logging.info(f'action: bet loaded | result: success | bet: {bet}')
 
-        except OSError as e:
-            logging.error(f"action: receive_message | result: fail | error: {e}")
-        except json.JSONDecodeError as e:
-            logging.error(f"action: json_decode | result: fail | error: {e}")
-        finally:
-            client_sock.close()
 
     def __accept_new_connection(self):
         """

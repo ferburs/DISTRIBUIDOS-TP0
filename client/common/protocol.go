@@ -3,7 +3,7 @@ package common
 import (
 	"encoding/json"
 	"net"
-	//"time"
+	"bufio"
 
 	"github.com/op/go-logging"
 )
@@ -23,10 +23,10 @@ func NewProtocol(conn net.Conn) *Protocol {
 }
 
 // WriteData sends data over the connection, ensuring that all data is written.
-func (p *Protocol) WriteData(data []byte) error {
+func (p *Protocol) WriteData(data string) error {
 	totalSent := 0
 	for totalSent < len(data) {
-		n, err := p.conn.Write(data[totalSent:])
+		n, err := p.conn.Write([]byte(msg[sentBytes:]))
 		if err != nil {
 			return err
 		}
@@ -36,22 +36,19 @@ func (p *Protocol) WriteData(data []byte) error {
 }
 
 // ReadAll reads all data from the connection until EOF or error.
-func (p *Protocol) ReadAll() ([]byte, error) {
-	var data []byte
+func (p *Protocol) ReadAll(ID sting) (string, error) {
+	var msg string
+	readBuffer := bufio.NewReader(p.conn)
 	for {
-		buf := make([]byte, 1024)
-		n, err := p.conn.Read(buf)
-		if n > 0 {
-			data = append(data, buf[:n]...)
-		}
+		line, err := readBuffer.ReadString('\n')
 		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			}
-			return nil, err
+			log.Errorf("action: read_all | result: fail | client_id: %s | error: %v", ID, err)
+			return "", err
 		}
+		msg += line
 	}
-	return data, nil
+	log.Infof("action: read_all | result: success | client_id: %s | message: %s", ID, msg)	
+	return msg, nil
 }
 
 // SerializeBet serializes a bet map to JSON format.

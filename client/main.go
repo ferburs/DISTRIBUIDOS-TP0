@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"archive/zip"
 
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
@@ -108,8 +109,50 @@ func main() {
 		ID:            v.GetString("id"),
 		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
+		BathMaxAmount: v.GetInt("bath.maxAmount"),
 	}
 
-	client := common.NewClient(clientConfig)
+	zipFile, err := v.openZipFile("data/dataset.zip")
+	if err != nil {
+		log.Criticalf("action: open_zip_file | result: fail | error: %v", err)
+	}
+	defer zipFile.Close()
+
+
+	agencyCSV, err := openAgencyCSV(zipFile)
+	if err != nil {
+		log.Criticalf("action: open_agency_csv | result: fail | error: %v", err)
+	}
+	defer agencyCSV.Close()
+
+	agencyReader := csv.NewReader(agencyCSV)
+
+	client := common.NewClient(clientConfig, agencyReader)
 	client.StartClientLoop()
+}
+
+func openZipFile(zipFile string) (*zip.ReadCloser, error) {
+	// Open the zip file
+	
+	path = fmt.Sprintf("./%s", zipFile)
+
+	zipReader, err := zip.OpenReader(path)
+
+	if err != nil {
+		log.Criticalf("action: open_zip_file | result: fail | error: %v", err)
+	}
+
+	return zipReader, nil
+
+}
+
+func openAgencyCSV(zipFile *zip.ReadCloser) (*zip.File, error) {
+	// Open the csv file
+	for _, file := range zipFile.File {
+		if file.Name == fmt.Sprintf("agency-%v.csv", clientConfig.ID) {
+			return file, nil
+		}
+	}
+
+	return nil, errors.New("agency.csv not found in zip file")
 }
