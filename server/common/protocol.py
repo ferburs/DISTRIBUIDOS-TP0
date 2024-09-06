@@ -4,20 +4,6 @@ class Protocol:
     def __init__(self, sock):
         self.sock = sock
 
-    # def recv_message(self):
-    #     """
-    #     Receive and deserialize a JSON message from the socket
-    #     """
-    #     data = self.__recv_all().decode('utf-8')
-    #     return json.loads(data)
-
-    # def send_message(self, message):
-    #     """
-    #     Serialize and send a JSON message through the socket
-    #     """
-    #     data = json.dumps(message).encode('utf-8')
-    #     self.__send_all(data)
-
     def recv_all(self):
         """
         Receive all data from the socket
@@ -49,6 +35,4 @@ class Protocol:
         Send the winner count to the client
         """
         msg = "\n".join(listWinners) + "\n\n"
-        #print (f"msg: {msg}")
         self.send_all(msg.encode('utf-8'))
-        #self.sock.send(str(agency_bets_count).encode('utf-8') + "\n".encode('utf-8'))

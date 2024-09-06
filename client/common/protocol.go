@@ -72,11 +72,3 @@ func (p *Protocol) NotifyDone(ID string) error {
 	}
 	return nil
 }
-
-func (p *Protocol) RequestWinners() error {
-	err := p.WriteData("REQUEST_WINNERS\n\n")
-	if err != nil {
-		return err
-	}
-	return nil
-}

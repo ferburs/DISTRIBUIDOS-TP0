@@ -91,7 +91,6 @@ func (c *Client) StartClientLoop() {
 			batch += messageSerialized
 			}
 		batch += "\n"
-		//log.Infof("batch: %v", batch)
 
 		err := c.protocol.WriteData(batch)
 		if err != nil {
@@ -114,8 +113,6 @@ func (c *Client) notifyClientDone(ID string){
 }
 
 func (c *Client) waitWinners(ID string){
-
-	println("cliet envia esperando ganadores")
 
 	msg := fmt.Sprintf("%v#REQUEST_WINNERS\n\n", ID)
 	err := c.protocol.WriteData(msg)
